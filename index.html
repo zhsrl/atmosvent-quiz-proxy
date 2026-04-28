@@ -145,6 +145,13 @@
             margin-bottom: 10px;
         }
 
+        /* Сетка для вариантов с картинками */
+        .options-list.with-images {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+        }
+
         .option-item {
             display: flex;
             align-items: center;
@@ -154,14 +161,45 @@
             border: 2px solid transparent;
             cursor: pointer;
             transition: all 0.2s ease;
+            background: var(--card-bg);
+        }
+
+        /* Стили карточки с фото */
+        .option-item.has-image {
+            padding: 12px;
+            flex-direction: column;
+            align-items: stretch;
+            gap: 12px;
+            border: 2px solid var(--border-color);
         }
 
         .option-item:hover {
             background: #f8fafc;
+            border-color: #cbd5e1;
         }
 
         .option-item.selected {
             background: transparent;
+            border-color: transparent;
+        }
+
+        .option-item.has-image.selected {
+            border-color: var(--primary-blue);
+            background: #f4f7ff; /* легкий синий фон для выбранной карточки */
+        }
+
+        .option-image {
+            width: 100%;
+            height: 140px;
+            object-fit: cover;
+            border-radius: 8px;
+            background-color: #f3f4f6; /* цвет загрузки */
+        }
+
+        .option-content {
+            display: flex;
+            align-items: center;
+            gap: 12px;
         }
 
         .radio-btn {
@@ -174,6 +212,7 @@
             justify-content: center;
             flex-shrink: 0;
             transition: all 0.2s ease;
+            background: white;
         }
 
         .option-item.selected .radio-btn {
@@ -313,6 +352,23 @@
         @keyframes drawCheck {
             to { stroke-dashoffset: 0; }
         }
+
+        /* Адаптивность */
+        @media (max-width: 600px) {
+            .options-list.with-images {
+                gap: 10px;
+            }
+            .option-item.has-image {
+                padding: 8px;
+                gap: 8px;
+            }
+            .option-image {
+                height: 90px; /* Картинка меньше на мобильном */
+            }
+            .option-text {
+                font-size: 13px; /* Текст чуть меньше в карточках */
+            }
+        }
     </style>
 </head>
 <body>
@@ -363,6 +419,13 @@
                     "Пәтер (Тұрғын үй кешені)",
                     "Бизнес нысаны (Офис, Отель, Мейрамхана)",
                     "Құрылысы жүріп жатқан нысан (Черновой)"
+                ],
+                // Добавлены картинки к вариантам ответа
+                images: [
+                    "images/1.jpg",
+                    "images/2.jpg",
+                    "images/3.jpg",
+                    "images/4.jpg"
                 ]
             },
             {
@@ -449,22 +512,42 @@
                 return;
             }
 
-            // Рендер обычного вопроса (Без кнопок навигации)
-            let optionsHtml = stepData.options.map((opt) => {
+            // Рендер обычного вопроса (С или Без картинок)
+            let optionsHtml = stepData.options.map((opt, index) => {
                 const isSelected = answers[currentStep] === opt;
-                return `
-                    <div class="option-item ${isSelected ? 'selected' : ''}" onclick="selectOption('${opt}')">
-                        <div class="radio-btn">${checkIcon}</div>
-                        <div class="option-text">${opt}</div>
-                    </div>
-                `;
+                // Проверяем, есть ли картинка для этого пункта
+                const imgSrc = stepData.images ? stepData.images[index] : null;
+
+                if (imgSrc) {
+                    // Вариант С картинкой (карточка)
+                    return `
+                        <div class="option-item has-image ${isSelected ? 'selected' : ''}" onclick="selectOption('${opt}')">
+                            <img src="${imgSrc}" class="option-image" alt="Нысан">
+                            <div class="option-content">
+                                <div class="radio-btn">${checkIcon}</div>
+                                <div class="option-text">${opt}</div>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    // Обычный вариант БЕЗ картинки (список)
+                    return `
+                        <div class="option-item ${isSelected ? 'selected' : ''}" onclick="selectOption('${opt}')">
+                            <div class="radio-btn">${checkIcon}</div>
+                            <div class="option-text">${opt}</div>
+                        </div>
+                    `;
+                }
             }).join('');
+
+            // Если есть картинки, применяем класс сетки
+            const listClass = stepData.images ? 'options-list with-images' : 'options-list';
 
             contentDiv.innerHTML = `
                 <div class="q-number">${stepData.qNumber}</div>
                 <div class="q-title">${stepData.title}</div>
                 <div class="q-subtitle">${stepData.subtitle}</div>
-                <div class="options-list">
+                <div class="${listClass}">
                     ${optionsHtml}
                 </div>
             `;
@@ -573,7 +656,7 @@
             };
 
             // Отправляем данные на ваш серверный скрипт Vercel (полный URL)
-            fetch('https://project-ekokl.vercel.app/api/proxy', {
+            fetch('https://project-ekokl.vercel.app/api/amo', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
