@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="kk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Желдету жүйесі бойынша квиз</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Google+Sans:ital,opsz,wght@0,17..18,400..700;1,17..18,400..700&family=Inter+Tight:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
+    <style>
+        /* Базовые стили */
+        :root {
+            --bg-gradient: linear-gradient(135deg, #eef2f6 0%, #e0e7ff 100%);
+            --card-bg: #ffffff;
+            --text-main: #111827;
+            --text-muted: #6b7280;
+            --primary-blue: #4f46e5;
+            --border-color: #e5e7eb;
+            --progress-gradient: linear-gradient(90deg, #f97316, #ec4899);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Google Sans', 'Inter Tight', sans-serif;
+        }
+
+        body {
+            background: var(--bg-gradient);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        /* Контейнер квиза и эффект стопки карточек */
+        .quiz-container {
+            position: relative;
+            width: 100%;
+            max-width: 540px;
+            margin: 0 auto;
+        }
+
+        .card-layer {
+            position: absolute;
+            background: var(--card-bg);
+            border-radius: 24px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+            width: 100%;
+            height: 100%;
+            transition: all 0.3s ease;
+        }
+
+        .card-layer-3 {
+            transform: translateY(24px) scale(0.92);
+            opacity: 0.4;
+            z-index: 1;
+        }
+
+        .card-layer-2 {
+            transform: translateY(12px) scale(0.96);
+            opacity: 0.7;
+            z-index: 2;
+        }
+
+        /* Основная карточка */
+        .card-main {
+            position: relative;
+            background: var(--card-bg);
+            border-radius: 24px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.08);
+            z-index: 3;
+            padding: 40px;
+            min-height: 580px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* Анимация смены контента */
+        .fade-content {
+            animation: fadeIn 0.4s ease forwards;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Прогресс бар */
+        .progress-bar {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 30px;
+            justify-content: center;
+        }
+
+        .progress-segment {
+            height: 6px;
+            flex: 1;
+            background: #f3f4f6;
+            border-radius: 10px;
+            transition: all 0.3s ease;
+        }
+
+        .progress-segment.active {
+            background: var(--progress-gradient);
+        }
+
+        /* Заголовки */
+        .q-number {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-muted);
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            margin-bottom: 16px;
+        }
+
+        .q-title {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--text-main);
+            line-height: 1.3;
+            margin-bottom: 24px;
+        }
+
+        .q-subtitle {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-muted);
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            margin-bottom: 16px;
+        }
+
+        /* Варианты ответов */
+        .options-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            flex-grow: 1;
+            margin-bottom: 10px;
+        }
+
+        .option-item {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 16px 20px;
+            border-radius: 12px;
+            border: 2px solid transparent;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .option-item:hover {
+            background: #f8fafc;
+        }
+
+        .option-item.selected {
+            background: transparent;
+        }
+
+        .radio-btn {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            border: 2px solid #cbd5e1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            transition: all 0.2s ease;
+        }
+
+        .option-item.selected .radio-btn {
+            background: var(--primary-blue);
+            border-color: var(--primary-blue);
+        }
+
+        .radio-btn svg {
+            width: 14px;
+            height: 14px;
+            fill: none;
+            stroke: white;
+            stroke-width: 3;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            opacity: 0;
+            transform: scale(0.5);
+            transition: all 0.2s ease;
+        }
+
+        .option-item.selected .radio-btn svg {
+            opacity: 1;
+            transform: scale(1);
+        }
+
+        .option-text {
+            font-size: 16px;
+            font-weight: 500;
+            color: var(--text-main);
+            line-height: 1.4;
+        }
+
+        /* Форма контактов (Последний шаг) */
+        .lead-form-container {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            flex-grow: 1;
+        }
+        
+        .lead-text {
+            font-size: 15px;
+            line-height: 1.5;
+            color: var(--text-muted);
+            margin-bottom: 10px;
+        }
+
+        .lead-magnet {
+            background: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            padding: 16px;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 600;
+            color: #166534;
+            margin-bottom: 10px;
+        }
+
+        .input-field {
+            width: 100%;
+            padding: 16px 20px;
+            border-radius: 12px;
+            border: 2px solid var(--border-color);
+            font-size: 16px;
+            font-family: 'Google Sans', 'Inter Tight', sans-serif;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .input-field:focus {
+            border-color: var(--primary-blue);
+        }
+
+        /* Кнопка отправки формы */
+        .btn-submit {
+            background: #18181b;
+            color: #ffffff;
+            border: 2px solid #ffffff;
+            box-shadow: 0 0 0 2px #18181b;
+            padding: 16px 20px;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 800; /* Сделали текст жирнее */
+            cursor: pointer;
+            transition: transform 0.1s, opacity 0.2s;
+            margin-top: 10px;
+            width: 100%;
+        }
+
+        .btn-submit:active {
+            transform: scale(0.98);
+        }
+
+        .btn-submit:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* Экран успешной отправки и 2D галочка */
+        .success-screen {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            height: 100%;
+            flex-grow: 1;
+        }
+        
+        .success-icon {
+            width: 80px;
+            height: 80px;
+            background: #22c55e; /* Обычный 2D зеленый цвет */
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 24px;
+            transform: scale(0);
+            animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+
+        .success-icon svg {
+            width: 40px;
+            height: 40px;
+            stroke-dasharray: 100;
+            stroke-dashoffset: 100;
+            animation: drawCheck 0.4s 0.3s ease forwards;
+        }
+
+        @keyframes popIn {
+            0% { transform: scale(0); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        @keyframes drawCheck {
+            to { stroke-dashoffset: 0; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="quiz-container">
+        <!-- Декоративные карточки на фоне -->
+        <div class="card-layer card-layer-3"></div>
+        <div class="card-layer card-layer-2"></div>
+        
+        <!-- Основная карточка с контентом -->
+        <div class="card-main">
+            <!-- Прогресс бар -->
+            <div class="progress-bar" id="progressBar">
+                <div class="progress-segment"></div>
+                <div class="progress-segment"></div>
+                <div class="progress-segment"></div>
+                <div class="progress-segment"></div>
+                <div class="progress-segment"></div>
+            </div>
+
+            <!-- Динамичный контент квиза -->
+            <div id="quizContent" class="fade-content" style="display: flex; flex-direction: column; flex-grow: 1;">
+                <!-- Сюда подгружается контент через JS -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Данные квиза
+        const quizData = [
+            {
+                qNumber: "Сұрақ - 1",
+                title: "Желдету жүйесін қай жерге орнату қажет?",
+                subtitle: "БІР НҰСҚАНЫ ТАҢДАҢЫЗ",
+                options: [
+                    "Алматы қаласы",
+                    "Қаскелең / Батыс бағыты",
+                    "Талғар / Шығыс бағыты",
+                    "Алматы облысы (басқа елді мекен)"
+                ]
+            },
+            {
+                qNumber: "Сұрақ - 2",
+                title: "Нысанның түрін таңдаңыз:",
+                subtitle: "БІР НҰСҚАНЫ ТАҢДАҢЫЗ",
+                options: [
+                    "Жеке үй / Коттедж",
+                    "Пәтер (Тұрғын үй кешені)",
+                    "Бизнес нысаны (Офис, Отель, Мейрамхана)",
+                    "Құрылысы жүріп жатқан нысан (Черновой)"
+                ]
+            },
+            {
+                qNumber: "Сұрақ - 3",
+                title: "Сізді қандай мәселе мазалайды?",
+                subtitle: "БІР НҰСҚАНЫ ТАҢДАҢЫЗ",
+                options: [
+                    "Терезелер терлейді және ылғалдылық жоғары",
+                    "Қабырғаларда зең (плесень) пайда болды",
+                    "Үй іші өте тымырсық (духота), ауа жетпейді",
+                    "Алматының смогы мен шаңынан қорғану қажет",
+                    "Жаңа үй салып жатырмын, алдын алғым келеді"
+                ]
+            },
+            {
+                qNumber: "Сұрақ - 4",
+                title: "Нысанның жалпы шаршы метрі (м²) қандай?",
+                subtitle: "БІР НҰСҚАНЫ ТАҢДАҢЫЗ",
+                options: [
+                    "100 м²-ге дейін",
+                    "100 — 200 м²",
+                    "200 — 400 м²",
+                    "400 м²-ден астам"
+                ]
+            },
+            {
+                // Шаг 5: Lead Form
+                title: "Рахмет! Жауаптарыңыз қабылданды.",
+                isForm: true
+            }
+        ];
+
+        // Состояние квиза
+        let currentStep = 0;
+        let answers = {}; // Хранение ответов пользователя
+        let isTransitioning = false; // Блокировка двойного клика
+
+        // Элементы DOM
+        const contentDiv = document.getElementById('quizContent');
+        const segments = document.querySelectorAll('.progress-segment');
+
+        // Иконка галочки для радио-кнопки
+        const checkIcon = `<svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>`;
+
+        // Функция рендера текущего шага
+        function renderStep() {
+            // Перезапуск анимации
+            contentDiv.classList.remove('fade-content');
+            void contentDiv.offsetWidth; // trigger reflow
+            contentDiv.classList.add('fade-content');
+
+            const stepData = quizData[currentStep];
+
+            // Обновление прогресс бара
+            segments.forEach((seg, index) => {
+                if (index <= currentStep) {
+                    seg.classList.add('active');
+                } else {
+                    seg.classList.remove('active');
+                }
+            });
+
+            // Рендер Формы (Последний шаг)
+            if (stepData.isForm) {
+                contentDiv.innerHTML = `
+                    <div class="q-title">${stepData.title}</div>
+                    <div class="lead-form-container">
+                        <p class="lead-text">Біздің инженер сіздің нысаныңыз бойынша есептеулер жүргізу үшін 10 минут ішінде хабарласады.</p>
+                        <div class="lead-magnet">
+                            🎁 Байланыс нөміріңізді қалдырып, инженердің тегін келуі мен нысанды тексеруін брондаңыз!
+                        </div>
+                        <input type="text" id="userName" class="input-field" placeholder="Атыңыз" required>
+                        <input type="tel" id="userPhone" class="input-field" placeholder="+7 (---) --- -- --" value="+7 " required>
+                        <button class="btn-submit" id="btnSubmit" onclick="submitQuiz()" disabled>НӘТИЖЕНІ АЛУ ЖӘНЕ ЖАЗЫЛУ</button>
+                    </div>
+                `;
+                checkFormValidity();
+                
+                // Слушатели для инпутов, чтобы активировать кнопку
+                document.getElementById('userName').addEventListener('input', checkFormValidity);
+                const phoneInput = document.getElementById('userPhone');
+                phoneInput.addEventListener('input', onPhoneInput);
+                phoneInput.addEventListener('keydown', onPhoneKeyDown);
+                return;
+            }
+
+            // Рендер обычного вопроса (Без кнопок навигации)
+            let optionsHtml = stepData.options.map((opt) => {
+                const isSelected = answers[currentStep] === opt;
+                return `
+                    <div class="option-item ${isSelected ? 'selected' : ''}" onclick="selectOption('${opt}')">
+                        <div class="radio-btn">${checkIcon}</div>
+                        <div class="option-text">${opt}</div>
+                    </div>
+                `;
+            }).join('');
+
+            contentDiv.innerHTML = `
+                <div class="q-number">${stepData.qNumber}</div>
+                <div class="q-title">${stepData.title}</div>
+                <div class="q-subtitle">${stepData.subtitle}</div>
+                <div class="options-list">
+                    ${optionsHtml}
+                </div>
+            `;
+        }
+
+        // Функция выбора ответа с авто-переходом
+        function selectOption(optionText) {
+            if (isTransitioning) return; // Защита от быстрого двойного клика
+
+            answers[currentStep] = optionText;
+            renderStep(); // Перерисовываем, чтобы показать, что пункт выбран (синий кружок)
+            
+            isTransitioning = true;
+
+            // Задержка 400мс, чтобы пользователь увидел свой выбор, затем переход дальше
+            setTimeout(() => {
+                nextStep();
+                isTransitioning = false;
+            }, 400); 
+        }
+
+        // Валидация формы на последнем шаге
+        function checkFormValidity() {
+            const btnSubmit = document.getElementById('btnSubmit');
+            if (btnSubmit) {
+                const name = document.getElementById('userName').value.trim();
+                const phone = document.getElementById('userPhone').value.trim();
+                // Активируем кнопку только если введено имя и полный номер телефона (18 символов)
+                btnSubmit.disabled = !(name.length > 1 && phone.length === 18);
+            }
+        }
+
+        // Маска для казахстанского номера телефона
+        function onPhoneInput(e) {
+            let input = e.target;
+            let numbers = input.value.replace(/\D/g, ''); // Оставляем только цифры
+            
+            if (!numbers) {
+                input.value = '';
+                checkFormValidity();
+                return;
+            }
+
+            // Автоматическая корректировка префикса
+            if (numbers[0] === '8') {
+                numbers = '7' + numbers.slice(1);
+            }
+            if (numbers[0] !== '7') {
+                numbers = '7' + numbers;
+            }
+
+            // Формируем строку +7 (XXX) XXX XX XX
+            let formatted = '+7 ';
+            if (numbers.length > 1) {
+                formatted += '(' + numbers.substring(1, 4);
+            }
+            if (numbers.length >= 5) {
+                formatted += ') ' + numbers.substring(4, 7);
+            }
+            if (numbers.length >= 8) {
+                formatted += ' ' + numbers.substring(7, 9);
+            }
+            if (numbers.length >= 10) {
+                formatted += ' ' + numbers.substring(9, 11);
+            }
+
+            input.value = formatted;
+            checkFormValidity();
+        }
+
+        // Обработка удаления (Backspace)
+        function onPhoneKeyDown(e) {
+            if (e.keyCode === 8 && e.target.value.replace(/\D/g, '').length <= 1) {
+                e.target.value = ''; // Полностью очищаем поле, если удаляем последнюю цифру
+            }
+        }
+
+        // Логика перехода вперед
+        function nextStep() {
+            if (currentStep < quizData.length - 1) {
+                currentStep++;
+                renderStep();
+            }
+        }
+
+        // Отправка формы
+        function submitQuiz() {
+            const name = document.getElementById('userName').value;
+            const phone = document.getElementById('userPhone').value;
+            const btnSubmit = document.getElementById('btnSubmit');
+            
+            // Блокируем кнопку, чтобы не нажали дважды, и меняем текст
+            btnSubmit.disabled = true;
+            btnSubmit.innerText = "Жіберілуде...";
+            
+            // Формируем текст из ответов квиза
+            let answersText = "Жауаптар:\n";
+            for (let key in answers) {
+                answersText += `${quizData[key].title} - ${answers[key]}\n`;
+            }
+
+            const payload = {
+                name: name,
+                phone: phone,
+                answers: answersText
+            };
+
+            // Отправляем данные на ваш серверный скрипт Vercel (полный URL)
+            fetch('https://project-ekokl.vercel.app/api/proxy', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(payload)
+            })
+            .then(response => {
+                // Показываем экран успеха
+                contentDiv.classList.remove('fade-content');
+                void contentDiv.offsetWidth;
+                contentDiv.classList.add('fade-content');
+                
+                contentDiv.innerHTML = `
+                    <div class="success-screen">
+                        <div class="success-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+                        </div>
+                        <div class="q-title">Өтінім қабылданды!</div>
+                        <p class="lead-text" style="margin-top: 10px;">Қызығушылық танытқаныңызға рахмет. Жақын арада инженер сізбен хабарласады.</p>
+                    </div>
+                `;
+            })
+            .catch(error => {
+                console.error("Қате шықты:", error);
+                btnSubmit.disabled = false;
+                btnSubmit.innerText = "НӘТИЖЕНІ АЛУ ЖӘНЕ ЖАЗЫЛУ";
+                alert("Ошибка отправки. Проверьте подключение к интернету.");
+            });
+        }
+
+        // Инициализация при загрузке
+        renderStep();
+    </script>
+</body>
+</html>
