@@ -33,7 +33,7 @@ export default async function handler(req, res) {
         // 1. Формируем запрос "Complex" (Создает Сделку + Контакт одновременно)
         const leadData = [
             {
-                name: 'Жаңа өтінім (Квиз Желдету)', // Название сделки
+                name: 'qweez.me: Лид (QUIZ) ', // Название сделки
                 price: 0,
                 _embedded: {
                     contacts: [
