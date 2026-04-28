@@ -32,7 +32,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 20px;
+            padding: 16px; /* Уменьшен общий отступ для лучшего центрирования */
         }
 
         /* Контейнер квиза и эффект стопки карточек */
@@ -145,8 +145,9 @@
             margin-bottom: 10px;
         }
 
-        /* Сетка для вариантов с картинками */
-        .options-list.with-images {
+        /* Сетка для вариантов с картинками и текстовых квадратов */
+        .options-list.with-images,
+        .options-list.text-grid {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
             gap: 16px;
@@ -173,6 +174,18 @@
             border: 2px solid var(--border-color);
         }
 
+        /* Стили карточки (текстовые квадраты) */
+        .option-item.text-square {
+            padding: 24px 16px;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            gap: 16px;
+            border: 2px solid var(--border-color);
+            min-height: 140px;
+        }
+
         .option-item:hover {
             background: #f8fafc;
             border-color: #cbd5e1;
@@ -183,9 +196,15 @@
             border-color: transparent;
         }
 
-        .option-item.has-image.selected {
+        .option-item.has-image.selected,
+        .option-item.text-square.selected {
             border-color: var(--primary-blue);
             background: #f4f7ff; /* легкий синий фон для выбранной карточки */
+        }
+
+        .option-item.text-square .option-text {
+            font-weight: 600;
+            font-size: 20px; /* Увеличили размер текста для 4 вопроса */
         }
 
         .option-image {
@@ -286,6 +305,20 @@
             border-color: var(--primary-blue);
         }
 
+        /* Ошибки валидации */
+        .input-field.error {
+            border-color: #ef4444; /* Красный цвет для ошибки */
+        }
+
+        .error-message {
+            color: #ef4444;
+            font-size: 13px;
+            font-weight: 500;
+            margin-top: -10px;
+            margin-bottom: 4px;
+            display: none; /* Скрыто по умолчанию */
+        }
+
         /* Кнопка отправки формы */
         .btn-submit {
             background: #18181b;
@@ -355,7 +388,15 @@
 
         /* Адаптивность */
         @media (max-width: 600px) {
-            .options-list.with-images {
+            body {
+                padding: 12px; /* Ровные и небольшие отступы по краям экрана */
+            }
+            .card-main {
+                padding: 24px 16px; /* Уменьшаем внутренний padding для центрирования на смартфонах */
+                min-height: 480px;
+            }
+            .options-list.with-images,
+            .options-list.text-grid {
                 gap: 10px;
             }
             .option-item.has-image {
@@ -367,6 +408,14 @@
             }
             .option-text {
                 font-size: 13px; /* Текст чуть меньше в карточках */
+            }
+            .option-item.text-square {
+                padding: 16px 12px;
+                min-height: 110px;
+                gap: 12px;
+            }
+            .option-item.text-square .option-text {
+                font-size: 16px; /* Увеличили размер текста на смартфонах */
             }
         }
     </style>
@@ -449,7 +498,8 @@
                     "100 — 200 м²",
                     "200 — 400 м²",
                     "400 м²-ден астам"
-                ]
+                ],
+                isTextGrid: true // Флаг для отображения в виде текстовых квадратов
             },
             {
                 // Шаг 5: Lead Form
@@ -498,21 +548,33 @@
                             🎁 Байланыс нөміріңізді қалдырып, инженердің тегін келуі мен нысанды тексеруін брондаңыз!
                         </div>
                         <input type="text" id="userName" class="input-field" placeholder="Атыңыз" required>
+                        <div class="error-message" id="nameError">Атыңызды жазыңыз</div>
+                        
                         <input type="tel" id="userPhone" class="input-field" placeholder="+7 (---) --- -- --" value="+7 " required>
-                        <button class="btn-submit" id="btnSubmit" onclick="submitQuiz()" disabled>НӘТИЖЕНІ АЛУ ЖӘНЕ ЖАЗЫЛУ</button>
+                        <div class="error-message" id="phoneError">Толық нөмірді енгізіңіз</div>
+                        
+                        <button class="btn-submit" id="btnSubmit" onclick="submitQuiz()">НӘТИЖЕНІ АЛУ ЖӘНЕ ЖАЗЫЛУ</button>
                     </div>
                 `;
-                checkFormValidity();
                 
-                // Слушатели для инпутов, чтобы активировать кнопку
-                document.getElementById('userName').addEventListener('input', checkFormValidity);
+                // Слушатели для очистки ошибок при вводе текста
+                const nameInput = document.getElementById('userName');
+                nameInput.addEventListener('input', function() {
+                    this.classList.remove('error');
+                    document.getElementById('nameError').style.display = 'none';
+                });
+
                 const phoneInput = document.getElementById('userPhone');
-                phoneInput.addEventListener('input', onPhoneInput);
+                phoneInput.addEventListener('input', function(e) {
+                    this.classList.remove('error');
+                    document.getElementById('phoneError').style.display = 'none';
+                    onPhoneInput(e);
+                });
                 phoneInput.addEventListener('keydown', onPhoneKeyDown);
                 return;
             }
 
-            // Рендер обычного вопроса (С или Без картинок)
+            // Рендер обычного вопроса (С картинками, текстовая сетка или обычный список)
             let optionsHtml = stepData.options.map((opt, index) => {
                 const isSelected = answers[currentStep] === opt;
                 // Проверяем, есть ли картинка для этого пункта
@@ -529,6 +591,14 @@
                             </div>
                         </div>
                     `;
+                } else if (stepData.isTextGrid) {
+                    // Вариант ТЕКСТОВАЯ СЕТКА (Квадраты с текстом)
+                    return `
+                        <div class="option-item text-square ${isSelected ? 'selected' : ''}" onclick="selectOption('${opt}')">
+                            <div class="option-text">${opt}</div>
+                            <div class="radio-btn">${checkIcon}</div>
+                        </div>
+                    `;
                 } else {
                     // Обычный вариант БЕЗ картинки (список)
                     return `
@@ -540,8 +610,10 @@
                 }
             }).join('');
 
-            // Если есть картинки, применяем класс сетки
-            const listClass = stepData.images ? 'options-list with-images' : 'options-list';
+            // Применяем класс сетки, если это изображения или текстовая плитка
+            let listClass = 'options-list';
+            if (stepData.images) listClass += ' with-images';
+            if (stepData.isTextGrid) listClass += ' text-grid';
 
             contentDiv.innerHTML = `
                 <div class="q-number">${stepData.qNumber}</div>
@@ -569,17 +641,6 @@
             }, 400); 
         }
 
-        // Валидация формы на последнем шаге
-        function checkFormValidity() {
-            const btnSubmit = document.getElementById('btnSubmit');
-            if (btnSubmit) {
-                const name = document.getElementById('userName').value.trim();
-                const phone = document.getElementById('userPhone').value.trim();
-                // Активируем кнопку только если введено имя и полный номер телефона (18 символов)
-                btnSubmit.disabled = !(name.length > 1 && phone.length === 18);
-            }
-        }
-
         // Маска для казахстанского номера телефона
         function onPhoneInput(e) {
             let input = e.target;
@@ -587,7 +648,6 @@
             
             if (!numbers) {
                 input.value = '';
-                checkFormValidity();
                 return;
             }
 
@@ -615,7 +675,6 @@
             }
 
             input.value = formatted;
-            checkFormValidity();
         }
 
         // Обработка удаления (Backspace)
@@ -635,10 +694,31 @@
 
         // Отправка формы
         function submitQuiz() {
-            const name = document.getElementById('userName').value;
-            const phone = document.getElementById('userPhone').value;
+            const nameInput = document.getElementById('userName');
+            const phoneInput = document.getElementById('userPhone');
+            const name = nameInput.value.trim();
+            const phone = phoneInput.value.trim();
             const btnSubmit = document.getElementById('btnSubmit');
             
+            let isValid = true;
+
+            // Валидация имени
+            if (name.length < 2) {
+                nameInput.classList.add('error');
+                document.getElementById('nameError').style.display = 'block';
+                isValid = false;
+            }
+
+            // Валидация телефона (должно быть 18 символов: +7 (XXX) XXX XX XX)
+            if (phone.length !== 18) {
+                phoneInput.classList.add('error');
+                document.getElementById('phoneError').style.display = 'block';
+                isValid = false;
+            }
+
+            // Прерываем отправку, если есть ошибки
+            if (!isValid) return;
+
             // Блокируем кнопку, чтобы не нажали дважды, и меняем текст
             btnSubmit.disabled = true;
             btnSubmit.innerText = "Жіберілуде...";
