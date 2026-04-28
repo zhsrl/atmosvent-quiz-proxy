@@ -234,6 +234,11 @@
             background: white;
         }
 
+        /* Квадратный чекбокс для множественного выбора */
+        .checkbox-btn {
+            border-radius: 6px !important;
+        }
+
         .option-item.selected .radio-btn {
             background: var(--primary-blue);
             border-color: var(--primary-blue);
@@ -319,7 +324,7 @@
             display: none; /* Скрыто по умолчанию */
         }
 
-        /* Кнопка отправки формы */
+        /* Кнопка отправки формы / перехода */
         .btn-submit {
             background: #18181b;
             color: #ffffff;
@@ -480,14 +485,15 @@
             {
                 qNumber: "Сұрақ - 3",
                 title: "Сізді қандай мәселе мазалайды?",
-                subtitle: "БІР НҰСҚАНЫ ТАҢДАҢЫЗ",
+                subtitle: "БІРНЕШЕ НҰСҚАНЫ ТАҢДАУҒА БОЛАДЫ", // Изменен подзаголовок
                 options: [
                     "Терезелер терлейді және ылғалдылық жоғары",
                     "Қабырғаларда зең (плесень) пайда болды",
                     "Үй іші өте тымырсық (духота), ауа жетпейді",
                     "Алматының смогы мен шаңынан қорғану қажет",
                     "Жаңа үй салып жатырмын, алдын алғым келеді"
-                ]
+                ],
+                isMultichoice: true // Флаг множественного выбора
             },
             {
                 qNumber: "Сұрақ - 4",
@@ -576,9 +582,16 @@
 
             // Рендер обычного вопроса (С картинками, текстовая сетка или обычный список)
             let optionsHtml = stepData.options.map((opt, index) => {
-                const isSelected = answers[currentStep] === opt;
+                // Проверяем, выбран ли пункт (разная логика для мультивыбора и обычного)
+                const isSelected = stepData.isMultichoice ? 
+                    (answers[currentStep] && answers[currentStep].includes(opt)) : 
+                    (answers[currentStep] === opt);
+                    
                 // Проверяем, есть ли картинка для этого пункта
                 const imgSrc = stepData.images ? stepData.images[index] : null;
+                
+                // Для мультивыбора делаем иконку квадратной
+                const btnClass = stepData.isMultichoice ? 'radio-btn checkbox-btn' : 'radio-btn';
 
                 if (imgSrc) {
                     // Вариант С картинкой (карточка)
@@ -586,7 +599,7 @@
                         <div class="option-item has-image ${isSelected ? 'selected' : ''}" onclick="selectOption('${opt}')">
                             <img src="${imgSrc}" class="option-image" alt="Нысан">
                             <div class="option-content">
-                                <div class="radio-btn">${checkIcon}</div>
+                                <div class="${btnClass}">${checkIcon}</div>
                                 <div class="option-text">${opt}</div>
                             </div>
                         </div>
@@ -596,14 +609,14 @@
                     return `
                         <div class="option-item text-square ${isSelected ? 'selected' : ''}" onclick="selectOption('${opt}')">
                             <div class="option-text">${opt}</div>
-                            <div class="radio-btn">${checkIcon}</div>
+                            <div class="${btnClass}">${checkIcon}</div>
                         </div>
                     `;
                 } else {
                     // Обычный вариант БЕЗ картинки (список)
                     return `
                         <div class="option-item ${isSelected ? 'selected' : ''}" onclick="selectOption('${opt}')">
-                            <div class="radio-btn">${checkIcon}</div>
+                            <div class="${btnClass}">${checkIcon}</div>
                             <div class="option-text">${opt}</div>
                         </div>
                     `;
@@ -615,6 +628,17 @@
             if (stepData.images) listClass += ' with-images';
             if (stepData.isTextGrid) listClass += ' text-grid';
 
+            // Если вопрос с множественным выбором, добавляем кнопку "Далее"
+            let nextBtnHtml = '';
+            if (stepData.isMultichoice) {
+                const hasSelection = answers[currentStep] && answers[currentStep].length > 0;
+                nextBtnHtml = `
+                    <div style="margin-top: 10px;">
+                        <button class="btn-submit" onclick="nextStep()" ${!hasSelection ? 'disabled' : ''}>КЕЛЕСІ СҰРАҚ</button>
+                    </div>
+                `;
+            }
+
             contentDiv.innerHTML = `
                 <div class="q-number">${stepData.qNumber}</div>
                 <div class="q-title">${stepData.title}</div>
@@ -622,23 +646,31 @@
                 <div class="${listClass}">
                     ${optionsHtml}
                 </div>
+                ${nextBtnHtml}
             `;
         }
 
-        // Функция выбора ответа с авто-переходом
+        // Функция выбора ответа с моментальным переходом
         function selectOption(optionText) {
-            if (isTransitioning) return; // Защита от быстрого двойного клика
+            const stepData = quizData[currentStep];
 
-            answers[currentStep] = optionText;
-            renderStep(); // Перерисовываем, чтобы показать, что пункт выбран (синий кружок)
-            
-            isTransitioning = true;
-
-            // Задержка 400мс, чтобы пользователь увидел свой выбор, затем переход дальше
-            setTimeout(() => {
-                nextStep();
-                isTransitioning = false;
-            }, 400); 
+            if (stepData.isMultichoice) {
+                // Логика множественного выбора
+                if (!answers[currentStep]) answers[currentStep] = []; // Инициализируем массив
+                
+                const idx = answers[currentStep].indexOf(optionText);
+                if (idx > -1) {
+                    answers[currentStep].splice(idx, 1); // Убираем, если уже выбран
+                } else {
+                    answers[currentStep].push(optionText); // Добавляем, если не выбран
+                }
+                
+                renderStep(); // Перерисовываем карточку (обновляются чекбоксы и кнопка "Далее")
+            } else {
+                // Логика одиночного выбора (моментальный переход без задержки)
+                answers[currentStep] = optionText;
+                nextStep(); 
+            }
         }
 
         // Маска для казахстанского номера телефона
@@ -726,7 +758,9 @@
             // Формируем текст из ответов квиза
             let answersText = "Жауаптар:\n";
             for (let key in answers) {
-                answersText += `${quizData[key].title} - ${answers[key]}\n`;
+                // Если ответ - это массив (как в вопросе 3), объединяем через запятую
+                let answerVal = Array.isArray(answers[key]) ? answers[key].join(', ') : answers[key];
+                answersText += `${quizData[key].title} - ${answerVal}\n`;
             }
 
             const payload = {
@@ -763,7 +797,7 @@
                 // Автоматическая переадресация в WhatsApp через 2.5 секунды
                 setTimeout(() => {
                     window.location.href = "https://wa.me/77076141819?text=%D0%A1%D3%99%D0%BB%D0%B5%D0%BC%D0%B5%D1%82%D1%81%D1%96%D0%B7%20%D0%B1%D0%B5%2C%20%D1%82%D0%B5%D0%B3%D1%96%D0%BD%20%D0%B7%D0%B0%D0%BC%D0%B5%D1%80%20%D0%B6%D3%99%D0%BD%D0%B5%20%D0%BA%D0%BE%D0%BD%D1%81%D1%83%D0%BB%D1%8C%D1%82%D0%B0%D1%86%D0%B8%D1%8F%20%D0%B0%D0%BB%D0%B0%D0%B9%D1%8B%D0%BD%20%D0%B4%D0%B5%D0%BF%20%D0%B5%D0%B4%D1%96%D0%BC";
-                }, 1000);
+                }, 2500);
             })
             .catch(error => {
                 console.error("Қате шықты:", error);
